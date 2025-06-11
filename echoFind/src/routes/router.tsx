@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Login } from "../pages/Login.tsx/login";
+import SignInSide from "../pages/SignIn/login";
+import SignUp from "../pages/SignUp/signUp";
 
 function Router() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* <Route path="/login" element={<Login />} /> */}
-        <Route path="/" element={<Login />} />
-        <Route path="*" element={<Login />} />
+        <Route path="/SignIn" element={<SignInSide />} />
+        <Route path="/SignUp" element={<SignUp />} />
       </Routes>
     </BrowserRouter>
   );
