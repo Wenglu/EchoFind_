@@ -13,7 +13,10 @@ import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import ForgotPassword from "./forgotPassword";
 import { useNavigate } from "react-router-dom";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { auth } from "../../../firebase/firebase";
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -40,6 +43,7 @@ export default function SignInCard() {
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const navigate = useNavigate();
 
   const handleClickOpen = () => {
@@ -50,25 +54,47 @@ export default function SignInCard() {
     setOpen(false);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    if (emailError || passwordError) {
-      event.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+
+    const isValid = validateInputs(event.currentTarget);
+    if (!isValid) {
+      setIsSubmitting(false);
       return;
     }
-    const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get("email"),
-      password: data.get("password"),
-    });
+
+    const email = event.currentTarget.email.value;
+    const password = event.currentTarget.password.value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error signing in:", error);
+      // Handle different Firebase auth errors
+      if (error === "auth/user-not-found") {
+        setEmailError(true);
+        setEmailErrorMessage("User not found. Please check your email.");
+      } else if (error === "auth/wrong-password") {
+        setPasswordError(true);
+        setPasswordErrorMessage("Incorrect password. Please try again.");
+      } else {
+        setEmailError(true);
+        setEmailErrorMessage("Failed to sign in. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const validateInputs = () => {
-    const email = document.getElementById("email") as HTMLInputElement;
-    const password = document.getElementById("password") as HTMLInputElement;
+  const validateInputs = (form: HTMLFormElement) => {
+    const email = form.email.value;
+    const password = form.password.value;
 
     let isValid = true;
 
-    if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
       setEmailError(true);
       setEmailErrorMessage("Please enter a valid email address.");
       isValid = false;
@@ -77,7 +103,7 @@ export default function SignInCard() {
       setEmailErrorMessage("");
     }
 
-    if (!password.value || password.value.length < 6) {
+    if (!password || password.length < 6) {
       setPasswordError(true);
       setPasswordErrorMessage("Password must be at least 6 characters long.");
       isValid = false;
@@ -108,14 +134,7 @@ export default function SignInCard() {
         sx={{ display: "flex", flexDirection: "column", width: "100%", gap: 2 }}
       >
         <FormControl>
-          <FormLabel
-            htmlFor="email"
-            onChange={(e) => {
-              console.log(e.target);
-            }}
-          >
-            Email
-          </FormLabel>
+          <FormLabel htmlFor="email">Email</FormLabel>
           <TextField
             error={emailError}
             helperText={emailErrorMessage}
@@ -124,7 +143,6 @@ export default function SignInCard() {
             name="email"
             placeholder="Enter your email"
             autoComplete="email"
-            autoFocus
             required
             fullWidth
             variant="outlined"
@@ -152,7 +170,6 @@ export default function SignInCard() {
             type="password"
             id="password"
             autoComplete="current-password"
-            autoFocus
             required
             fullWidth
             variant="outlined"
@@ -168,9 +185,9 @@ export default function SignInCard() {
           type="submit"
           fullWidth
           variant="contained"
-          onClick={validateInputs}
+          disabled={isSubmitting}
         >
-          Sign in
+          {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>
         <Typography sx={{ textAlign: "center" }}>
           Don&apos;t have an account?{" "}
@@ -198,7 +215,6 @@ export default function SignInCard() {
           fullWidth
           variant="outlined"
           onClick={() => alert("Sign in with Facebook")}
-          //   startIcon={<FacebookIcon />}
         >
           Sign in with Facebook
         </Button>

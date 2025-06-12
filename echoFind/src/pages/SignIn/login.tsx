@@ -4,7 +4,7 @@ import SignInCard from "./components/signInCard";
 import Content from "./components/content";
 import { Box } from "@mui/material";
 
-export default function SignInSide(props: { disableCustomTheme?: boolean }) {
+export default function SignInSide() {
   return (
     <Box>
       <CssBaseline enableColorScheme />
