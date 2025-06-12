@@ -14,6 +14,7 @@ import Stack from "@mui/material/Stack";
 import MuiCard from "@mui/material/Card";
 import { styled } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 import {
   GoogleIcon,
@@ -111,13 +112,14 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Zatrzymaj przeładowanie formularza
+    event.preventDefault();
 
     if (!validateInputs()) return;
 
     const email = (document.getElementById("email") as HTMLInputElement).value;
     const password = (document.getElementById("password") as HTMLInputElement)
       .value;
+    const name = (document.getElementById("name") as HTMLInputElement).value;
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -126,10 +128,19 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
         password
       );
       const user = userCredential.user;
-      console.log("User created:", user);
-      navigate("/"); // przekierowanie np. na stronę główną po sukcesie
+
+      const db = getFirestore();
+      await setDoc(doc(db, "users", user.uid), {
+        name: name,
+        email: email,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      });
+
+      console.log("User created and saved to Firestore:", user.uid);
+      navigate("/"); // Przekierowanie po sukcesie
     } catch (error: any) {
-      console.error("Error creating user:", error.code, error.message);
+      console.error("Error:", error.code, error.message);
 
       if (error.code === "auth/email-already-in-use") {
         setEmailError(true);
