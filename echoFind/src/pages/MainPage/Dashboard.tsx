@@ -67,8 +67,6 @@ function Dashboard() {
     }
   };
 
-  // ... (bez zmian do togglePlay)
-
   const togglePlay = (track: Track) => {
     if (!track.preview_url) {
       setError("No preview available for this track");
@@ -178,12 +176,6 @@ function Dashboard() {
             Search
           </Button>
         </Stack>
-
-        {error && (
-          <Typography color="error" align="center" sx={{ mb: 2 }}>
-            {error}
-          </Typography>
-        )}
 
         {loading && <LinearProgress sx={{ mb: 4 }} />}
       </Paper>
