@@ -14,8 +14,10 @@ import { styled } from "@mui/material/styles";
 import ForgotPassword from "./forgotPassword";
 import { useNavigate } from "react-router-dom";
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth } from "../../../firebase/firebase";
 
@@ -37,6 +39,17 @@ const Card = styled(MuiCard)(({ theme }) => ({
   }),
 }));
 
+// Spotify OAuth config
+const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
+const REDIRECT_URI = "https://localhost:3000/callback";
+const SCOPES = [
+  "streaming",
+  "user-read-email",
+  "user-read-private",
+  "user-read-playback-state",
+  "user-modify-playback-state",
+].join(" ");
+
 export default function SignInCard() {
   const [emailError, setEmailError] = React.useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = React.useState("");
@@ -46,52 +59,12 @@ export default function SignInCard() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    const isValid = validateInputs(event.currentTarget);
-    if (!isValid) {
-      setIsSubmitting(false);
-      return;
-    }
-
-    const email = event.currentTarget.email.value;
-    const password = event.currentTarget.password.value;
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Error signing in:", error);
-      // Handle different Firebase auth errors
-      if (error === "auth/user-not-found") {
-        setEmailError(true);
-        setEmailErrorMessage("User not found. Please check your email.");
-      } else if (error === "auth/wrong-password") {
-        setPasswordError(true);
-        setPasswordErrorMessage("Incorrect password. Please try again.");
-      } else {
-        setEmailError(true);
-        setEmailErrorMessage("Failed to sign in. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const handleClickOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
   const validateInputs = (form: HTMLFormElement) => {
     const email = form.email.value;
     const password = form.password.value;
-
     let isValid = true;
 
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
@@ -115,11 +88,69 @@ export default function SignInCard() {
     return isValid;
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+
+    const isValid = validateInputs(event.currentTarget);
+    if (!isValid) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    const email = event.currentTarget.email.value;
+    const password = event.currentTarget.password.value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Error signing in:", error);
+      if (error.code === "auth/user-not-found") {
+        setEmailError(true);
+        setEmailErrorMessage("User not found. Please check your email.");
+      } else if (error.code === "auth/wrong-password") {
+        setPasswordError(true);
+        setPasswordErrorMessage("Incorrect password. Please try again.");
+      } else {
+        setEmailError(true);
+        setEmailErrorMessage("Failed to sign in. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Google sign in error:", error);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    const provider = new FacebookAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Facebook sign in error:", error);
+    }
+  };
+
+  const handleSpotifyLogin = () => {
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(
+      REDIRECT_URI
+    )}&scope=${encodeURIComponent(SCOPES)}`;
+
+    window.location.href = authUrl;
+  };
+
   return (
     <Card variant="outlined">
-      <Box sx={{ display: { xs: "flex", md: "none" } }}>
-        {/* <SitemarkIcon /> */}
-      </Box>
       <Typography
         component="h1"
         variant="h4"
@@ -202,21 +233,18 @@ export default function SignInCard() {
           </span>
         </Typography>
       </Box>
+
       <Divider>or</Divider>
+
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <Button
-          fullWidth
-          variant="outlined"
-          onClick={() => alert("Sign in with Google")}
-        >
+        <Button fullWidth variant="outlined" onClick={handleGoogleSignIn}>
           Sign in with Google
         </Button>
-        <Button
-          fullWidth
-          variant="outlined"
-          onClick={() => alert("Sign in with Facebook")}
-        >
+        <Button fullWidth variant="outlined" onClick={handleFacebookSignIn}>
           Sign in with Facebook
+        </Button>
+        <Button fullWidth variant="outlined" onClick={handleSpotifyLogin}>
+          Sign in with Spotify
         </Button>
       </Box>
     </Card>

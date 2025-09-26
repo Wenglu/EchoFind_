@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -8,14 +8,13 @@ import {
   CardContent,
   CardMedia,
   Grid,
-  LinearProgress,
   IconButton,
   Box,
   Paper,
   Stack,
-  Slider,
+  LinearProgress,
 } from "@mui/material";
-import { PlayArrow, Pause, Search as SearchIcon } from "@mui/icons-material";
+import { PlayArrow, Search as SearchIcon } from "@mui/icons-material";
 import axios from "axios";
 
 interface Track {
@@ -26,326 +25,191 @@ interface Track {
   cover: string;
   preview_url: string | null;
   spotify_url: string;
+  uri?: string;
 }
 
-function Dashboard() {
+export default function Dashboard() {
   const [artist, setArtist] = useState("");
   const [title, setTitle] = useState("");
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Zmienione:
-  const [currentlyPlayingTrack, setCurrentlyPlayingTrack] =
-    useState<Track | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // 1. Pobierz token z URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("access_token");
+    if (token) setAccessToken(token);
+  }, []);
 
+  // 2. Inicjalizacja Spotify Web Playback SDK
+  useEffect(() => {
+    if (!accessToken) return;
+
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const player = new window.Spotify.Player({
+        name: "My Web Player",
+        getOAuthToken: (cb: (token: string) => void) => cb(accessToken),
+        volume: 0.5,
+      });
+
+      player.addListener("ready", ({ device_id }: { device_id: string }) => {
+        console.log("Got Device ID:", device_id);
+        setDeviceId(device_id);
+      });
+
+      player.addListener(
+        "not_ready",
+        ({ device_id }: { device_id: string }) => {
+          console.log("Device went offline", device_id);
+        }
+      );
+
+      player.connect();
+    };
+
+    const script = document.createElement("script");
+    script.src = "https://sdk.scdn.co/spotify-player.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, [accessToken]);
+
+  // 3. Pobranie rekomendacji z backendu
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!artist.trim() || !title.trim()) {
       setError("Please enter both artist and title");
       return;
     }
-
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axios.post("http://localhost:5001/recommend", {
+      const res = await axios.post("http://localhost:5001/recommend", {
         artist,
         title,
       });
-      setRecommendations(response.data.recommendations);
-    } catch (err) {
-      setError("Failed to get recommendations. Please try again.");
-      console.error(err);
+      setRecommendations(
+        res.data.recommendations.map((t: Track) => ({
+          ...t,
+          uri: `spotify:track:${t.id}`,
+        }))
+      );
+    } catch {
+      setError("Failed to fetch recommendations");
     } finally {
       setLoading(false);
     }
   };
 
-  const togglePlay = (track: Track) => {
-    if (!track.preview_url) {
-      setError("No preview available for this track");
+  // 4. Odtwarzanie utworu
+  const playTrack = async (track: Track) => {
+    if (!deviceId || !accessToken || !track.uri) {
+      setError("Spotify Player not ready");
       return;
     }
 
-    if (currentlyPlayingTrack?.id === track.id) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
+    await fetch(
+      `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ uris: [track.uri] }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
       }
-      audioRef.current = new Audio(track.preview_url);
-      audioRef.current
-        .play()
-        .then(() => {
-          setCurrentlyPlayingTrack(track);
-          setIsPlaying(true);
-          setProgress(0);
-
-          audioRef.current?.addEventListener("ended", () => {
-            setIsPlaying(false);
-            setCurrentlyPlayingTrack(null);
-            setProgress(0);
-          });
-
-          audioRef.current?.addEventListener("timeupdate", () => {
-            if (audioRef.current) {
-              setProgress(audioRef.current.currentTime);
-            }
-          });
-        })
-        .catch((err) => {
-          console.error("Error playing audio:", err);
-          setError("Could not play preview. Please try another track.");
-        });
-    }
-  };
-
-  const handleProgressChange = (event: Event, value: number | number[]) => {
-    if (!audioRef.current) return;
-    const newTime = Array.isArray(value) ? value[0] : value;
-    audioRef.current.currentTime = newTime;
-    setProgress(newTime);
-  };
-
-  const handlePlayPause = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
+    );
   };
 
   return (
-    <Container
-      maxWidth="xl"
-      sx={{ py: 4, height: "100vh", overflowY: "auto", bgcolor: "#fafafa" }}
-    >
-      <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          align="center"
-          sx={{ fontWeight: "bold", mb: 3 }}
-        >
+    <Container>
+      <Paper sx={{ p: 4, mb: 4 }} elevation={3}>
+        <Typography variant="h4" align="center" gutterBottom>
           Music Recommender
         </Typography>
-
         <Stack
           component="form"
-          onSubmit={handleSearch}
-          spacing={2}
           direction="row"
-          sx={{ mb: 3 }}
+          spacing={2}
+          onSubmit={handleSearch}
         >
           <TextField
-            fullWidth
             label="Artist"
-            variant="outlined"
+            fullWidth
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
-            required
           />
           <TextField
-            fullWidth
             label="Title"
-            variant="outlined"
+            fullWidth
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
           />
           <Button
             type="submit"
             variant="contained"
-            color="primary"
-            size="large"
             startIcon={<SearchIcon />}
             disabled={loading}
-            sx={{ px: 4 }}
           >
             Search
           </Button>
         </Stack>
-
-        {loading && <LinearProgress sx={{ mb: 4 }} />}
+        {loading && <LinearProgress sx={{ mt: 2 }} />}
+        {error && (
+          <Typography color="error" align="center" sx={{ mt: 2 }}>
+            {error}
+          </Typography>
+        )}
       </Paper>
 
-      <Grid
-        container
-        spacing={3}
-        sx={{
-          justifyContent: "center",
-          flexWrap: "wrap",
-          gap: 3,
-        }}
-      >
+      <Grid container spacing={3}>
         {recommendations.map((track) => (
-          <Card
-            key={track.id}
-            sx={{
-              width: 300,
-              display: "flex",
-              flexDirection: "column",
-              cursor: track.preview_url ? "pointer" : "default",
-              position: "relative",
-              overflow: "hidden",
-            }}
-            onClick={() => togglePlay(track)} // <-- jeden argument: cały track
-          >
-            <Box
-              sx={{
-                position: "relative",
-                width: 300,
-                height: 300,
-                backgroundImage: `url(${track.cover})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                "&:hover .play-icon": {
-                  opacity: 1,
-                },
-              }}
-            >
-              <IconButton
-                className="play-icon"
-                aria-label="play/pause"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  togglePlay(track); // <-- jeden argument
-                }}
-                color={
-                  currentlyPlayingTrack?.id === track.id ? "primary" : "default"
-                }
-                disabled={!track.preview_url}
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  bgcolor: "rgba(0,0,0,0.5)",
-                  "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
-                  opacity: currentlyPlayingTrack?.id === track.id ? 1 : 0.7,
-                  transition: "opacity 0.3s ease",
-                  width: 60,
-                  height: 60,
-                }}
-              >
-                {currentlyPlayingTrack?.id === track.id ? (
-                  <Pause sx={{ fontSize: 40 }} />
-                ) : (
-                  <PlayArrow sx={{ fontSize: 40 }} />
-                )}
-              </IconButton>
-            </Box>
-
-            <CardContent sx={{ flexGrow: 1 }}>
-              <Typography
-                gutterBottom
-                variant="h6"
-                component="div"
-                noWrap
-                title={track.name}
-              >
-                {track.name}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-                title={track.artists}
-              >
-                {track.artists}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-                title={track.album}
-              >
-                {track.album}
-              </Typography>
-            </CardContent>
-            <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>
+          <Grid item key={track.id} xs={12} sm={6} md={4}>
+            <Card sx={{ width: 300 }}>
+              <Box sx={{ position: "relative", height: 300 }}>
+                <CardMedia
+                  component="img"
+                  image={track.cover}
+                  sx={{ height: "100%", objectFit: "cover" }}
+                />
+                <IconButton
+                  onClick={() => playTrack(track)}
+                  sx={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    bgcolor: "rgba(0,0,0,0.5)",
+                  }}
+                >
+                  <PlayArrow />
+                </IconButton>
+              </Box>
+              <CardContent>
+                <Typography noWrap>{track.name}</Typography>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {track.artists}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {track.album}
+                </Typography>
+              </CardContent>
               <Button
                 variant="outlined"
                 size="small"
                 href={track.spotify_url}
                 target="_blank"
-                rel="noopener"
               >
-                Open
+                Open in Spotify
               </Button>
-            </Box>
-          </Card>
+            </Card>
+          </Grid>
         ))}
       </Grid>
-
-      {/* BottomBar */}
-      {currentlyPlayingTrack && (
-        <Paper
-          elevation={6}
-          sx={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            bgcolor: "background.paper",
-            borderTop: 1,
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            px: 2,
-            py: 1,
-            zIndex: 1300,
-          }}
-        >
-          <CardMedia
-            component="img"
-            image={currentlyPlayingTrack.cover}
-            alt={currentlyPlayingTrack.name}
-            sx={{ height: 56, width: 56, borderRadius: 1, mr: 2 }}
-          />
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography noWrap fontWeight="bold">
-              {currentlyPlayingTrack.name}
-            </Typography>
-            <Typography noWrap variant="body2" color="text.secondary">
-              {currentlyPlayingTrack.artists}
-            </Typography>
-            <Slider
-              min={0}
-              max={audioRef.current?.duration || 0}
-              value={progress}
-              onChange={handleProgressChange}
-              size="small"
-              aria-label="audio progress"
-            />
-          </Box>
-          <IconButton
-            onClick={handlePlayPause}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? <Pause /> : <PlayArrow />}
-          </IconButton>
-        </Paper>
-      )}
-
-      {recommendations.length === 0 && !loading && (
-        <Typography variant="body1" align="center" sx={{ mt: 4 }}>
-          Search for a song to get recommendations
-        </Typography>
-      )}
     </Container>
   );
 }
-
-export default Dashboard;
