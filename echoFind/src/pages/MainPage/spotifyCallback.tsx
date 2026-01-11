@@ -1,63 +1,100 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Alert } from "@mui/material";
 
-const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
-const REDIRECT_URI = "https://echo-find-seven.vercel.app/callback";
+const BACKEND_URL = "http://127.0.0.1:5001"; // ← Zmień na 127.0.0.1
 
 export default function SpotifyCallback() {
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  console.log("🎯 [CALLBACK] Component rendered!");
 
   useEffect(() => {
+    console.log("🔄 [CALLBACK] SpotifyCallback component mounted");
+    console.log("📍 [CALLBACK] Current URL:", window.location.href);
+    console.log("🔍 [CALLBACK] URL search params:", window.location.search);
+    console.log("🔍 [CALLBACK] URL hash:", window.location.hash);
+
     const exchangeCodeForToken = async () => {
-      // Pobieramy code z URL (już nie hash, tylko query param)
+      console.log("⚙️ [CALLBACK] Starting token exchange...");
+
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const state = params.get("state");
-      const error = params.get("error");
+      const spotifyError = params.get("error");
+
+      console.log("📦 [CALLBACK] Extracted params:");
+      console.log("  - code:", code ? `${code.substring(0, 20)}...` : "null");
+      console.log("  - state:", state);
+      console.log("  - error:", spotifyError);
 
       const savedState = localStorage.getItem("spotify_auth_state");
-      const codeVerifier = localStorage.getItem("spotify_code_verifier");
+      console.log("💾 [CALLBACK] Saved state from localStorage:", savedState);
 
-      if (error) {
-        console.error("Spotify auth error:", error);
-        alert("Authorization failed: " + error);
-        navigate("/");
+      if (spotifyError) {
+        console.error("❌ [CALLBACK] Spotify error:", spotifyError);
+        setError(`Spotify authorization failed: ${spotifyError}`);
+        setTimeout(() => navigate("/"), 3000);
         return;
       }
 
       if (state !== savedState) {
-        console.error("State mismatch!");
-        alert("Security error: state mismatch");
-        navigate("/");
+        console.error("❌ [CALLBACK] State mismatch!");
+        console.error("  - Received state:", state);
+        console.error("  - Saved state:", savedState);
+        setError("Security error: state mismatch");
+        setTimeout(() => navigate("/"), 3000);
         return;
       }
 
-      if (!code || !codeVerifier) {
-        console.error("No code or verifier");
-        navigate("/");
+      console.log("✅ [CALLBACK] State validation passed");
+
+      if (!code) {
+        console.error("❌ [CALLBACK] No authorization code received");
+        setError("No authorization code received");
+        setTimeout(() => navigate("/"), 3000);
         return;
       }
+
+      const redirect_uri =
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:5173/callback"
+          : "https://echo-find-seven.vercel.app/callback";
+
+      console.log("🔗 [CALLBACK] Using redirect_uri:", redirect_uri);
 
       try {
-        // Wymieniamy code na access token
-        const response = await fetch("https://accounts.spotify.com/api/token", {
+        const requestBody = { code, redirect_uri };
+        console.log("📤 [CALLBACK] Sending request to backend:");
+        console.log("  - URL:", `${BACKEND_URL}/spotify/token`);
+        console.log("  - Body:", requestBody);
+
+        const response = await fetch(`${BACKEND_URL}/spotify/token`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",
           },
-          body: new URLSearchParams({
-            client_id: SPOTIFY_CLIENT_ID,
-            grant_type: "authorization_code",
-            code: code,
-            redirect_uri: REDIRECT_URI,
-            code_verifier: codeVerifier,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
-        const data = await response.json();
+        console.log("📥 [CALLBACK] Response status:", response.status);
+        console.log("📥 [CALLBACK] Response ok:", response.ok);
 
-        if (data.access_token) {
+        const data = await response.json();
+        console.log("📥 [CALLBACK] Response data:", data);
+
+        if (response.ok && data.access_token) {
+          console.log("✅ [CALLBACK] Token received successfully!");
+          console.log(
+            "  - Access token (first 20 chars):",
+            data.access_token.substring(0, 20) + "..."
+          );
+          console.log(
+            "  - Refresh token:",
+            data.refresh_token ? "Present" : "Missing"
+          );
+          console.log("  - Expires in:", data.expires_in, "seconds");
+
           const expirationTime = Date.now() + data.expires_in * 1000;
 
           localStorage.setItem("spotify_access_token", data.access_token);
@@ -67,17 +104,28 @@ export default function SpotifyCallback() {
             expirationTime.toString()
           );
           localStorage.removeItem("spotify_auth_state");
-          localStorage.removeItem("spotify_code_verifier");
 
-          console.log("✅ Spotify login successful!");
+          console.log("💾 [CALLBACK] Tokens saved to localStorage");
+          console.log("🎉 [CALLBACK] Spotify login successful!");
+          console.log("🚀 [CALLBACK] Navigating to /dashboard...");
+
           navigate("/dashboard");
         } else {
-          console.error("No access token received");
-          navigate("/");
+          console.error("❌ [CALLBACK] Token exchange failed");
+          console.error("  - Error:", data.error);
+          setError(data.error || "Token exchange failed");
+          setTimeout(() => navigate("/"), 3000);
         }
       } catch (err) {
-        console.error("Token exchange error:", err);
-        navigate("/");
+        console.error("❌ [CALLBACK] Fetch error:", err);
+        if (err instanceof Error) {
+          console.error("  - Error message:", err.message);
+          console.error("  - Error stack:", err.stack);
+        } else {
+          console.error("  - Unknown error:", err);
+        }
+        setError("Failed to connect to backend");
+        setTimeout(() => navigate("/"), 3000);
       }
     };
 
@@ -96,16 +144,24 @@ export default function SpotifyCallback() {
           "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
       }}
     >
-      <CircularProgress size={60} sx={{ color: "#1DB954", mb: 3 }} />
-      <Typography variant="h5" sx={{ color: "white", fontWeight: 500 }}>
-        Connecting to Spotify...
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{ color: "rgba(255, 255, 255, 0.6)", mt: 1 }}
-      >
-        Please wait while we authenticate your account
-      </Typography>
+      {error ? (
+        <Alert severity="error" sx={{ mb: 3, maxWidth: 500 }}>
+          {error}
+        </Alert>
+      ) : (
+        <>
+          <CircularProgress size={60} sx={{ color: "#1DB954", mb: 3 }} />
+          <Typography variant="h5" sx={{ color: "white", fontWeight: 500 }}>
+            Connecting to Spotify...
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "rgba(255, 255, 255, 0.6)", mt: 1 }}
+          >
+            Please wait while we authenticate your account
+          </Typography>
+        </>
+      )}
     </Box>
   );
 }

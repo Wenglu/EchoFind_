@@ -39,10 +39,12 @@ const Card = styled(MuiCard)(({ theme }) => ({
   }),
 }));
 
-// Spotify OAuth config - ZMIEŃ NA SWOJE!
-// Spotify OAuth config
 const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
-const REDIRECT_URI = "https://echo-find-seven.vercel.app/callback";
+
+const REDIRECT_URI =
+  window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:5173/callback"
+    : "https://echo-find-seven.vercel.app/callback";
 const SCOPES = [
   "streaming",
   "user-read-email",
@@ -53,45 +55,27 @@ const SCOPES = [
   "playlist-read-private",
 ].join(" ");
 
-// Funkcja do generowania code verifier i challenge dla PKCE
-const generateCodeVerifier = () => {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-};
+const handleSpotifyLogin = () => {
+  console.log("🎵 [SPOTIFY LOGIN] Starting Spotify login flow...");
+  console.log("📍 [SPOTIFY LOGIN] Current hostname:", window.location.hostname);
+  console.log("🔗 [SPOTIFY LOGIN] Redirect URI:", REDIRECT_URI);
+  console.log("🔑 [SPOTIFY LOGIN] Client ID:", SPOTIFY_CLIENT_ID);
+  console.log("📋 [SPOTIFY LOGIN] Scopes:", SCOPES);
 
-const generateCodeChallenge = async (verifier: string) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return btoa(String.fromCharCode(...new Uint8Array(hash)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-};
-
-const handleSpotifyLogin = async () => {
-  const codeVerifier = generateCodeVerifier();
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = Math.random().toString(36).substring(7);
-
-  // Zapisujemy do localStorage
-  localStorage.setItem("spotify_code_verifier", codeVerifier);
   localStorage.setItem("spotify_auth_state", state);
+  console.log("🎲 [SPOTIFY LOGIN] Generated state:", state);
 
-  // ZMIANA: response_type=code zamiast token
   const authUrl =
     `https://accounts.spotify.com/authorize?` +
     `client_id=${SPOTIFY_CLIENT_ID}&` +
-    `response_type=code&` + // ← ZMIANA!
+    `response_type=code&` +
     `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
     `scope=${encodeURIComponent(SCOPES)}&` +
-    `state=${state}&` +
-    `code_challenge_method=S256&` +
-    `code_challenge=${codeChallenge}`;
+    `state=${state}`;
+
+  console.log("🌐 [SPOTIFY LOGIN] Full auth URL:", authUrl);
+  console.log("🚀 [SPOTIFY LOGIN] Redirecting to Spotify...");
 
   window.location.href = authUrl;
 };
