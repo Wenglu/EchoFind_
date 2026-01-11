@@ -272,6 +272,21 @@ export default function Dashboard() {
     setSnackbarOpen(true);
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem("spotify_access_token");
+    console.log("Spotify token:", token);
+
+    if (token) {
+      // Testowy request do Spotify API
+      fetch("https://api.spotify.com/v1/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => console.log("Spotify user:", data))
+        .catch((err) => console.error("Token error:", err));
+    }
+  }, []);
+
   return (
     <Box
       sx={{

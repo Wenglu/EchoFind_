@@ -41,8 +41,7 @@ const Card = styled(MuiCard)(({ theme }) => ({
 
 // Spotify OAuth config - ZMIEŃ NA SWOJE!
 const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
-const REDIRECT_URI =
-  "https://echo-find-mad8r154h-karolweglarz2003-9940s-projects.vercel.app/callback";
+const REDIRECT_URI = "https://echo-find-seven.vercel.app/callback";
 const SCOPES = [
   "streaming",
   "user-read-email",
