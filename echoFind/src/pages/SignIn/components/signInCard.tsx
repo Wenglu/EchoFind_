@@ -39,15 +39,18 @@ const Card = styled(MuiCard)(({ theme }) => ({
   }),
 }));
 
-// Spotify OAuth config
+// Spotify OAuth config - ZMIEŃ NA SWOJE!
 const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
-const REDIRECT_URI = "https://localhost:3000/callback";
+const REDIRECT_URI =
+  "https://echo-find-mad8r154h-karolweglarz2003-9940s-projects.vercel.app/callback";
 const SCOPES = [
   "streaming",
   "user-read-email",
   "user-read-private",
   "user-read-playback-state",
   "user-modify-playback-state",
+  "user-library-read",
+  "playlist-read-private",
 ].join(" ");
 
 export default function SignInCard() {
@@ -141,11 +144,21 @@ export default function SignInCard() {
     }
   };
 
+  // ⚠️ POPRAWIONA FUNKCJA - używa implicit grant flow (najprostszy dla frontendu)
   const handleSpotifyLogin = () => {
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(
-      REDIRECT_URI
-    )}&scope=${encodeURIComponent(SCOPES)}`;
+    // Generujemy losowy state dla bezpieczeństwa
+    const state = Math.random().toString(36).substring(7);
+    localStorage.setItem("spotify_auth_state", state);
 
+    const authUrl =
+      `https://accounts.spotify.com/authorize?` +
+      `client_id=${SPOTIFY_CLIENT_ID}&` +
+      `response_type=token&` +
+      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+      `scope=${encodeURIComponent(SCOPES)}&` +
+      `state=${state}`;
+
+    // Przekierowanie do Spotify
     window.location.href = authUrl;
   };
 
@@ -243,7 +256,19 @@ export default function SignInCard() {
         <Button fullWidth variant="outlined" onClick={handleFacebookSignIn}>
           Sign in with Facebook
         </Button>
-        <Button fullWidth variant="outlined" onClick={handleSpotifyLogin}>
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={handleSpotifyLogin}
+          sx={{
+            borderColor: "#1DB954",
+            color: "#1DB954",
+            "&:hover": {
+              borderColor: "#1ed760",
+              backgroundColor: "rgba(29, 185, 84, 0.04)",
+            },
+          }}
+        >
           Sign in with Spotify
         </Button>
       </Box>
