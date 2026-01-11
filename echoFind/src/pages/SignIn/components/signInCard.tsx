@@ -40,6 +40,7 @@ const Card = styled(MuiCard)(({ theme }) => ({
 }));
 
 // Spotify OAuth config - ZMIEŃ NA SWOJE!
+// Spotify OAuth config
 const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
 const REDIRECT_URI = "https://echo-find-seven.vercel.app/callback";
 const SCOPES = [
@@ -51,6 +52,51 @@ const SCOPES = [
   "user-library-read",
   "playlist-read-private",
 ].join(" ");
+
+// Funkcja do generowania code verifier i challenge dla PKCE
+const generateCodeVerifier = () => {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+};
+
+const generateCodeChallenge = async (verifier: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+};
+
+// W komponencie:
+const handleSpotifyLogin = async () => {
+  // Generujemy PKCE parametry
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  const state = Math.random().toString(36).substring(7);
+
+  // Zapisujemy do localStorage
+  localStorage.setItem("spotify_code_verifier", codeVerifier);
+  localStorage.setItem("spotify_auth_state", state);
+
+  // ZMIANA: response_type=code zamiast token
+  const authUrl =
+    `https://accounts.spotify.com/authorize?` +
+    `client_id=${SPOTIFY_CLIENT_ID}&` +
+    `response_type=code&` + // ← ZMIANA!
+    `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+    `scope=${encodeURIComponent(SCOPES)}&` +
+    `state=${state}&` +
+    `code_challenge_method=S256&` +
+    `code_challenge=${codeChallenge}`;
+
+  window.location.href = authUrl;
+};
 
 export default function SignInCard() {
   const [emailError, setEmailError] = React.useState(false);
