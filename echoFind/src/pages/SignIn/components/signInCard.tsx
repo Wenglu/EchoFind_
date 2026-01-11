@@ -73,9 +73,7 @@ const generateCodeChallenge = async (verifier: string) => {
     .replace(/=/g, "");
 };
 
-// W komponencie:
 const handleSpotifyLogin = async () => {
-  // Generujemy PKCE parametry
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = Math.random().toString(36).substring(7);
@@ -187,24 +185,6 @@ export default function SignInCard() {
     } catch (error) {
       console.error("Facebook sign in error:", error);
     }
-  };
-
-  // ⚠️ POPRAWIONA FUNKCJA - używa implicit grant flow (najprostszy dla frontendu)
-  const handleSpotifyLogin = () => {
-    // Generujemy losowy state dla bezpieczeństwa
-    const state = Math.random().toString(36).substring(7);
-    localStorage.setItem("spotify_auth_state", state);
-
-    const authUrl =
-      `https://accounts.spotify.com/authorize?` +
-      `client_id=${SPOTIFY_CLIENT_ID}&` +
-      `response_type=token&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-      `scope=${encodeURIComponent(SCOPES)}&` +
-      `state=${state}`;
-
-    // Przekierowanie do Spotify
-    window.location.href = authUrl;
   };
 
   return (
