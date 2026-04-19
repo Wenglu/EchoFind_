@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Container,
   Box,
@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [player, setPlayer] = useState<any>(null);
+  const playerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
@@ -80,15 +81,19 @@ export default function Dashboard() {
       fetch("https://api.spotify.com/v1/me", {
         headers: { Authorization: `Bearer ${tokenFromStorage}` },
       })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("✅ [AUTH] User verified:", data.display_name);
-          showSnackbar(`Welcome, ${data.display_name}!`);
+        .then((res) => {
+          if (res.status === 401) {
+            showSnackbar("Session expired. Please login again.");
+            handleLogout();
+            return null;
+          }
+          return res.json();
         })
-        .catch((err) => {
-          console.error("❌ [AUTH] Token validation failed:", err);
-          showSnackbar("Token expired. Please login again.");
-          handleLogout();
+        .then((data) => {
+          if (data) showSnackbar(`Welcome, ${data.display_name}!`);
+        })
+        .catch(() => {
+          // Network error – stay on dashboard, token may still be valid
         });
     } else {
       console.warn("⚠️ [AUTH] No token found");
@@ -175,7 +180,7 @@ export default function Dashboard() {
 
       spotifyPlayer.addListener("authentication_error", ({ message }: any) => {
         console.error("❌ [PLAYER] Auth error:", message);
-        handleLogout();
+        showSnackbar("Spotify auth error – try logging in again.");
       });
 
       spotifyPlayer.addListener("account_error", ({ message }: any) => {
@@ -185,11 +190,13 @@ export default function Dashboard() {
 
       spotifyPlayer.connect();
       setPlayer(spotifyPlayer);
+      playerRef.current = spotifyPlayer;
     }
 
     return () => {
-      if (player) {
-        player.disconnect();
+      if (playerRef.current) {
+        playerRef.current.disconnect();
+        playerRef.current = null;
       }
     };
   }, [accessToken]);
@@ -342,53 +349,90 @@ export default function Dashboard() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: { xs: 2, sm: 3 },
+            mb: { xs: 3, sm: 4 },
             flexWrap: "wrap",
             gap: 2,
           }}
         >
+          {/* Logo */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Box
               sx={{
-                width: 10,
-                height: 10,
+                width: 36,
+                height: 36,
                 borderRadius: "50%",
-                backgroundColor: playerReady ? theme.primary : "#ff4444",
-                boxShadow: playerReady
-                  ? `0 0 10px ${theme.primary}`
-                  : "0 0 10px #ff4444",
-              }}
-            />
-            <Typography
-              variant="body1"
-              sx={{
-                color: theme.text.secondary,
-                fontWeight: 500,
-                fontSize: { xs: "0.9rem", sm: "1rem" },
+                background: "linear-gradient(135deg, #1DB954, #1ed760)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 0 14px rgba(29,185,84,0.4)",
+                fontSize: 18,
+                flexShrink: 0,
               }}
             >
-              {playerReady ? "Connected" : "Connecting..."}
+              🎵
+            </Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 800,
+                color: "#fff",
+                letterSpacing: "-0.5px",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
+              Echo<Box component="span" sx={{ color: theme.primary }}>Find</Box>
             </Typography>
           </Box>
 
-          <Button
-            variant="outlined"
-            startIcon={<Logout />}
-            onClick={handleLogout}
-            sx={{
-              color: theme.text.secondary,
-              borderColor: theme.border,
-              textTransform: "none",
-              fontSize: { xs: "0.85rem", sm: "0.95rem" },
-              "&:hover": {
-                borderColor: theme.primary,
-                color: theme.primary,
-                backgroundColor: "rgba(29, 185, 84, 0.1)",
-              },
-            }}
-          >
-            Logout
-          </Button>
+          {/* Right side: status + logout */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: playerReady ? theme.primary : "#ff4444",
+                  boxShadow: playerReady
+                    ? `0 0 8px ${theme.primary}`
+                    : "0 0 8px #ff4444",
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.text.tertiary,
+                  fontWeight: 500,
+                  fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                }}
+              >
+                {playerReady ? "Connected" : "Connecting..."}
+              </Typography>
+            </Box>
+
+            <Button
+              variant="outlined"
+              startIcon={<Logout sx={{ fontSize: 16 }} />}
+              onClick={handleLogout}
+              size="small"
+              sx={{
+                color: theme.text.tertiary,
+                borderColor: "rgba(255,255,255,0.1)",
+                textTransform: "none",
+                fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                borderRadius: 2,
+                px: 1.5,
+                "&:hover": {
+                  borderColor: theme.primary,
+                  color: theme.primary,
+                  backgroundColor: "rgba(29, 185, 84, 0.08)",
+                },
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
         </Box>
 
         {/* Connection Alert */}
@@ -429,12 +473,7 @@ export default function Dashboard() {
         <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
           {recommendations.map((track, index) => (
             <Grid
-              item
-              xs={6} // 2 per row on mobile
-              sm={4} // 3 per row on tablet
-              md={3} // 4 per row on desktop
-              lg={2.4} // 5 per row on large desktop
-              xl={2} // 6 per row on extra large screens
+              size={{ xs: 6, sm: 4, md: 3, lg: 2 }}
               key={track.id}
             >
               <Grow in timeout={300 + index * 50}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, CircularProgress, Typography, Alert } from "@mui/material";
 
@@ -7,10 +7,11 @@ const BACKEND_URL = "http://127.0.0.1:5001"; // ← Zmień na 127.0.0.1
 export default function SpotifyCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  console.log("🎯 [CALLBACK] Component rendered!");
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    console.log("🔄 [CALLBACK] SpotifyCallback component mounted");
+    if (hasRun.current) return;
+    hasRun.current = true;
     console.log("📍 [CALLBACK] Current URL:", window.location.href);
     console.log("🔍 [CALLBACK] URL search params:", window.location.search);
     console.log("🔍 [CALLBACK] URL hash:", window.location.hash);

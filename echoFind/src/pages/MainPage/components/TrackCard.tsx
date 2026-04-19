@@ -56,8 +56,8 @@ export const TrackCard: React.FC<TrackCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        width: "480px",
-        height: "480px",
+        width: "100%",
+        height: "auto",
         display: "flex",
         flexDirection: "column",
         background: theme.background.card,
@@ -76,15 +76,19 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         },
       }}
     >
-      {/* Cover Image with Play Button */}
-      <Box sx={{ position: "relative", overflow: "hidden" }}>
+      {/* Cover Image with Play Button — padding-top trick forces 1:1 ratio */}
+      <Box sx={{ position: "relative", width: "100%", paddingTop: "100%", overflow: "hidden" }}>
         {track.cover ? (
           <CardMedia
             component="img"
             image={track.cover}
             alt={track.name}
             sx={{
-              aspectRatio: "1",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
               objectFit: "cover",
               transition: "transform 0.3s ease",
               transform: isHovered ? "scale(1.05)" : "scale(1)",
@@ -93,23 +97,19 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         ) : (
           <Box
             sx={{
-              aspectRatio: "1",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               background:
                 "linear-gradient(135deg, rgba(29, 185, 84, 0.2) 0%, rgba(30, 30, 46, 0.8) 100%)",
-              transition: "transform 0.3s ease",
-              transform: isHovered ? "scale(1.05)" : "scale(1)",
             }}
           >
-            <MusicNote
-              sx={{
-                fontSize: { xs: 60, sm: 80 },
-                color: theme.primary,
-                opacity: 0.6,
-              }}
-            />
+            <MusicNote sx={{ fontSize: { xs: 60, sm: 80 }, color: theme.primary, opacity: 0.6 }} />
           </Box>
         )}
 
