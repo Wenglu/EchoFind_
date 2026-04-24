@@ -1,5 +1,10 @@
+import { Box } from "@mui/material";
 import Router from "./routes/router";
 
 export default function App() {
-  return <Router />;
+  return (
+    <Box sx={{ height: "100vh", width: "100vw" }}>
+      <Router />
+    </Box>
+  );
 }
