@@ -9,27 +9,27 @@ import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 const items = [
   {
     icon: <SettingsSuggestRoundedIcon sx={{ color: "text.secondary" }} />,
-    title: "Adaptable performance",
+    title: "Dopasowana wydajność",
     description:
-      "Our product effortlessly adjusts to your needs, boosting efficiency and simplifying your tasks.",
+      "Nasza aplikacja automatycznie dostosowuje się do Twoich potrzeb, zapewniając szybką i precyzyjną identyfikację utworów muzycznych.",
   },
   {
     icon: <ConstructionRoundedIcon sx={{ color: "text.secondary" }} />,
-    title: "Built to last",
+    title: "Niezawodne działanie",
     description:
-      "Experience unmatched durability that goes above and beyond with lasting investment.",
+      "Dokładna analiza ścieżki dźwiękowej i pewne rozpoznawanie utworów, na które zawsze możesz liczyć.",
   },
   {
     icon: <ThumbUpAltRoundedIcon sx={{ color: "text.secondary" }} />,
-    title: "Great user experience",
+    title: "Intuicyjna obsługa",
     description:
-      "Integrate our product into your routine with an intuitive and easy-to-use interface.",
+      "Prosty i przyjazny interfejs pozwala łatwo znaleźć utwór i odkryć podobne kompozycje w tym samym gatunku.",
   },
   {
     icon: <AutoFixHighRoundedIcon sx={{ color: "text.secondary" }} />,
-    title: "Innovative functionality",
+    title: "Innowacyjne funkcje",
     description:
-      "Stay ahead with features that set new standards, addressing your evolving needs better than the rest.",
+      "Zaawansowane algorytmy analizy dźwięku i rekomendacji utworów, które wyróżniają naszą aplikację na tle konkurencji.",
   },
 ];
 

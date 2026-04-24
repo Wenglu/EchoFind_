@@ -3,38 +3,6 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import CssBaseline from "@mui/material/CssBaseline";
 
-const SPOTIFY_CLIENT_ID = "07aa42f54a97449784d02b56bbe8ccb4";
-
-const REDIRECT_URI =
-  window.location.hostname === "127.0.0.1"
-    ? "http://127.0.0.1:5173/callback"
-    : "https://echo-find-seven.vercel.app/callback";
-
-const SCOPES = [
-  "streaming",
-  "user-read-email",
-  "user-read-private",
-  "user-read-playback-state",
-  "user-modify-playback-state",
-  "user-library-read",
-  "playlist-read-private",
-].join(" ");
-
-const handleSpotifyLogin = () => {
-  const state = Math.random().toString(36).substring(7);
-  localStorage.setItem("spotify_auth_state", state);
-
-  const authUrl =
-    `https://accounts.spotify.com/authorize?` +
-    `client_id=${SPOTIFY_CLIENT_ID}&` +
-    `response_type=code&` +
-    `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-    `scope=${encodeURIComponent(SCOPES)}&` +
-    `state=${state}`;
-
-  window.location.href = authUrl;
-};
-
 export default function SignInSide() {
   return (
     <Box
