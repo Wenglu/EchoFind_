@@ -13,6 +13,13 @@ import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import ForgotPassword from "./forgotPassword";
 import { useNavigate } from "react-router-dom";
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth } from "../../../firebase/firebase";
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: "flex",
