@@ -3,8 +3,8 @@ import Router from "./routes/router";
 
 export default function App() {
   return (
-    <Box sx={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
-      <Router />;
+    <Box sx={{ height: "100vh", width: "100vw" }}>
+      <Router />
     </Box>
   );
 }
