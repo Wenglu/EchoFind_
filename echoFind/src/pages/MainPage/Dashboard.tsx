@@ -381,7 +381,10 @@ export default function Dashboard() {
                 fontSize: { xs: "1.25rem", sm: "1.5rem" },
               }}
             >
-              Echo<Box component="span" sx={{ color: theme.primary }}>Find</Box>
+              Echo
+              <Box component="span" sx={{ color: theme.primary }}>
+                Find
+              </Box>
             </Typography>
           </Box>
 
@@ -410,7 +413,6 @@ export default function Dashboard() {
                 {playerReady ? "Connected" : "Connecting..."}
               </Typography>
             </Box>
-
             <Button
               variant="outlined"
               startIcon={<Logout sx={{ fontSize: 16 }} />}
@@ -472,10 +474,7 @@ export default function Dashboard() {
         {/* Recommendations Grid */}
         <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
           {recommendations.map((track, index) => (
-            <Grid
-              size={{ xs: 6, sm: 4, md: 3, lg: 2 }}
-              key={track.id}
-            >
+            <Grid size={{ xs: 6, sm: 4, md: 3, lg: 2 }} key={track.id}>
               <Grow in timeout={300 + index * 50}>
                 <div>
                   <TrackCard
